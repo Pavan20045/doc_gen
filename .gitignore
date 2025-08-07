@@ -1,0 +1,23 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pkl
+*.index
+*.gguf
+
+# Node modules
+node_modules/
+
+# Uploaded files
+uploads/
+
+# Logs or temp files (if any)
+*.log
+*.tmp
+
+# Environment files
+.env
+
+# System files
+.DS_Store
+Thumbs.db

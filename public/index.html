@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Document Genius</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #f0f0f0;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2.5rem;
+      color: #00ffff;
+      text-shadow: 0 0 10px #00ffffaa;
+    }
+
+    .container {
+      background: rgba(20, 20, 30, 0.85);
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);
+      max-width: 700px;
+      margin: auto;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+      color: #a2ffe9;
+    }
+
+    input[type="file"],
+    textarea,
+    button {
+      width: 100%;
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      border-radius: 6px;
+      font-size: 1rem;
+      border: 1px solid #444;
+      background: #1a1a2e;
+      color: #e0f7ff;
+      outline: none;
+      box-shadow: 0 0 5px #00ffff33;
+    }
+
+    input[type="file"]::file-selector-button {
+      padding: 0.5rem 1rem;
+      border: none;
+      background-color: #00bcd4;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: 0.3s ease;
+    }
+
+    input[type="file"]::file-selector-button:hover {
+      background-color: #008ba3;
+    }
+
+    button {
+      background: linear-gradient(90deg, #00c6ff, #0072ff);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: none;
+      box-shadow: 0 0 10px #00c6ff88, 0 0 20px #0072ff44;
+    }
+
+    button:hover {
+      background: linear-gradient(90deg, #0072ff, #00c6ff);
+      box-shadow: 0 0 15px #00c6ffcc, 0 0 30px #0072ff88;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    #answer {
+      background: rgba(0, 255, 204, 0.05);
+      border-left: 5px solid #00ffcc;
+      padding: 1rem;
+      margin-top: 1rem;
+      display: none;
+      color: #aaffee;
+    }
+
+    #loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      display: none;
+    }
+
+    .spinner {
+      border: 6px solid rgba(255, 255, 255, 0.1);
+      border-top: 6px solid #00fff7;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+      box-shadow: 0 0 20px #00fff7aa;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="loader"><div class="spinner"></div></div>
+
+  <div class="container">
+    <h1>📄 Document Genius</h1>
+
+    <form id="uploadForm">
+      <label for="file">Upload PDF Document:</label>
+      <input type="file" id="file" accept="application/pdf" required />
+      <button type="submit">Upload & Index</button>
+    </form>
+
+    <form id="questionForm" style="display:none;">
+      <label for="question">Ask a question:</label>
+      <textarea id="question" rows="3" required></textarea>
+      <button type="submit">Ask</button>
+    </form>
+
+    <div id="answer"></div>
+  </div>
+
+  <script>
+    const uploadForm = document.getElementById("uploadForm");
+    const questionForm = document.getElementById("questionForm");
+    const answerDiv = document.getElementById("answer");
+    const loader = document.getElementById("loader");
+
+    function showLoader() {
+      loader.style.display = "flex";
+    }
+
+    function hideLoader() {
+      loader.style.display = "none";
+    }
+
+    uploadForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fileInput = document.getElementById("file");
+      const file = fileInput.files[0];
+      if (!file) return alert("Please choose a PDF file.");
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      showLoader();
+      try {
+        const res = await fetch("http://localhost:8000/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        if (res.ok) {
+          questionForm.style.display = "block";
+          answerDiv.style.display = "none";
+        } else {
+          alert("❌ Upload failed: " + data.error);
+        }
+      } catch (err) {
+        alert("❌ Upload error: " + err.message);
+      } finally {
+        hideLoader();
+      }
+    });
+
+    questionForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const question = document.getElementById("question").value;
+      if (!question) return;
+
+      answerDiv.innerHTML = "🧠 Thinking...";
+      answerDiv.style.display = "block";
+      showLoader();
+      try {
+        const res = await fetch("http://localhost:8000/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question }),
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          answerDiv.innerHTML = `<strong>Answer:</strong><br>${data.answer}`;
+        } else {
+          answerDiv.innerHTML = `❌ Error: ${data.error}`;
+        }
+      } catch (err) {
+        answerDiv.innerHTML = `❌ Request failed: ${err.message}`;
+      } finally {
+        hideLoader();
+      }
+    });
+  </script>
+</body>
+</html>
